@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VM Copy Helper</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a2332;
+      --surface2: #243044;
+      --border: #2d3a4f;
+      --text: #e7ecf3;
+      --muted: #8b9cb3;
+      --accent: #4f8cff;
+      --success: #3dd68c;
+      --radius: 10px;
+      --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+      --mono: Consolas, "Cascadia Code", monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+      padding-bottom: 40px;
+    }
+
+    header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(15, 20, 25, 0.95);
+    }
+
+    header h1 { margin: 0 0 6px; font-size: 1.35rem; font-weight: 650; }
+    header p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+
+    .layout { max-width: 900px; margin: 0 auto; padding: 24px; }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 160px;
+      resize: vertical;
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(79, 140, 255, 0.15);
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+      align-items: center;
+    }
+
+    button {
+      appearance: none;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    button:active { transform: scale(0.98); }
+
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #6ba0ff; }
+
+    .btn-secondary {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .meta { font-size: 0.82rem; color: var(--muted); }
+
+    .chars-setting {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+
+    .chars-setting input {
+      width: 64px;
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-size: 0.9rem;
+      font-family: var(--mono);
+    }
+
+    .chars-setting input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .line-chars {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .accuracy {
+      font-size: 0.82rem;
+      margin-top: 6px;
+    }
+
+    .accuracy.ok { color: var(--success); }
+    .accuracy.bad { color: #ff8a8a; }
+
+    .lines-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .lines-header h2 {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 650;
+    }
+
+    /* One line = one row */
+    .line-columns {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .line-row {
+      display: grid;
+      grid-template-columns: 44px 1fr auto;
+      gap: 10px;
+      align-items: stretch;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px;
+      transition: border-color 0.2s, opacity 0.2s;
+    }
+
+    .line-row.copied {
+      border-color: rgba(61, 214, 140, 0.35);
+      opacity: 0.65;
+    }
+
+    .line-row.copied .line-content {
+      filter: blur(4px);
+      opacity: 0.7;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .line-row.copied .line-num {
+      filter: blur(3px);
+      opacity: 0.6;
+    }
+
+    .line-row.copied .line-copy {
+      background: var(--surface2);
+      color: var(--muted);
+      border-color: var(--border);
+    }
+
+    .line-num {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--muted);
+      min-height: 44px;
+    }
+
+    .line-text {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--text);
+      word-break: break-word;
+      white-space: pre-wrap;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      cursor: text;
+      user-select: all;
+    }
+
+    .line-copy {
+      background: #1f6f4a;
+      color: #eafff3;
+      border: 1px solid #2f9d6a;
+      border-radius: 8px;
+      padding: 0 16px;
+      min-width: 72px;
+      min-height: 44px;
+      align-self: stretch;
+    }
+
+    .line-copy:hover { background: #268f58; }
+    .line-copy.done { background: #145c3d; }
+
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 40px 16px;
+      background: var(--surface);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
+    }
+
+    .hidden { display: none !important; }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 28px;
+      transform: translateX(-50%);
+      background: #1f6f4a;
+      color: #eafff3;
+      border: 1px solid #2f9d6a;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+      z-index: 50;
+    }
+
+    .toast.show { opacity: 1; }
+
+    @media (max-width: 600px) {
+      .line-row {
+        grid-template-columns: 36px 1fr;
+        grid-template-rows: auto auto;
+      }
+
+      .line-copy {
+        grid-column: 1 / -1;
+        min-height: 40px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>VM Copy Helper</h1>
+    <p>Paste your text → split by max chars per VM line → copy one row at a time.</p>
+  </header>
+
+  <div class="layout">
+    <div class="panel">
+      <label for="input">Paste your text here</label>
+      <textarea id="input" placeholder="Paste your full message here. It will be split into VM-sized chunks automatically..."></textarea>
+      <div class="toolbar">
+        <button class="btn-primary" id="splitBtn" type="button">Split into lines</button>
+        <button class="btn-secondary" id="clearBtn" type="button">Clear</button>
+        <label class="chars-setting">
+          Max chars per line
+          <input type="number" id="maxChars" value="121" min="40" max="300" />
+        </label>
+        <span class="meta" id="inputMeta"></span>
+        <span class="accuracy ok hidden" id="accuracy"></span>
+      </div>
+    </div>
+
+    <div id="linesSection" class="hidden">
+      <div class="lines-header">
+        <h2>Lines <span class="meta" id="lineCount"></span></h2>
+        <span class="meta">Each row ≤ max chars · <strong>Copy</strong> → paste in VM → next row</span>
+      </div>
+      <div class="line-columns" id="lineList"></div>
+    </div>
+
+    <div id="empty" class="empty">
+      Paste text above and click <strong>Split into lines</strong>.
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const input = document.getElementById("input");
+    const splitBtn = document.getElementById("splitBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const maxCharsInput = document.getElementById("maxChars");
+    const inputMeta = document.getElementById("inputMeta");
+    const accuracyEl = document.getElementById("accuracy");
+    const linesSection = document.getElementById("linesSection");
+    const lineCount = document.getElementById("lineCount");
+    const lineList = document.getElementById("lineList");
+    const empty = document.getElementById("empty");
+    const toast = document.getElementById("toast");
+
+    let toastTimer = null;
+
+    function getMaxChars() {
+      const n = parseInt(maxCharsInput.value, 10);
+      return Number.isFinite(n) && n >= 40 ? n : 121;
+    }
+
+    /** Split into chunks ≤ maxChars. Preserves every character and space exactly. */
+    function splitByMaxChars(text, maxChars) {
+      const src = text.replace(/\r\n/g, "\n");
+      if (src.length === 0) return [];
+
+      const lines = [];
+      let pos = 0;
+
+      while (pos < src.length) {
+        const remaining = src.length - pos;
+        if (remaining <= maxChars) {
+          lines.push(src.slice(pos));
+          break;
+        }
+
+        const windowEnd = pos + maxChars;
+        let cut = windowEnd;
+        const minPos = pos + Math.floor(maxChars * 0.4);
+
+        // Prefer breaking after newline or space — never trim or collapse whitespace
+        let breakAt = -1;
+        for (let i = windowEnd; i > minPos; i--) {
+          const ch = src[i];
+          if (ch === "\n" || ch === " ") {
+            breakAt = i;
+            break;
+          }
+        }
+
+        if (breakAt !== -1) {
+          cut = breakAt + 1;
+        }
+
+        lines.push(src.slice(pos, cut));
+        pos = cut;
+      }
+
+      return lines;
+    }
+
+    function isAccurate(lines, original) {
+      const src = original.replace(/\r\n/g, "\n");
+      return lines.join("") === src;
+    }
+
+    function showToast(msg) {
+      toast.textContent = msg;
+      toast.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove("show"), 2000);
+    }
+
+    async function copyText(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.setAttribute("readonly", "");
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+        return ok;
+      }
+    }
+
+    function renderLines(lines, maxChars) {
+      lineList.innerHTML = "";
+
+      if (!lines.length) {
+        linesSection.classList.add("hidden");
+        empty.classList.remove("hidden");
+        empty.innerHTML = "No text to split. Paste something above.";
+        return;
+      }
+
+      empty.classList.add("hidden");
+      linesSection.classList.remove("hidden");
+      lineCount.textContent = `(${lines.length} rows · max ${maxChars} chars)`;
+
+      lines.forEach((line, index) => {
+        const row = document.createElement("div");
+        row.className = "line-row";
+
+        const num = document.createElement("div");
+        num.className = "line-num";
+        num.textContent = index + 1;
+
+        const textWrap = document.createElement("div");
+        textWrap.className = "line-content";
+
+        const text = document.createElement("div");
+        text.className = "line-text";
+        text.textContent = line;
+        text.title = "Click to select";
+
+        const charMeta = document.createElement("div");
+        charMeta.className = "line-chars" + (line.length > maxChars ? " over" : "");
+        charMeta.textContent = `${line.length} chars`;
+
+        textWrap.appendChild(text);
+        textWrap.appendChild(charMeta);
+
+        const btn = document.createElement("button");
+        btn.className = "line-copy";
+        btn.type = "button";
+        btn.textContent = "Copy";
+
+        text.addEventListener("click", () => {
+          const range = document.createRange();
+          range.selectNodeContents(text);
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+        });
+
+        btn.addEventListener("click", async () => {
+          const ok = await copyText(line);
+          row.classList.add("copied");
+          btn.textContent = "Done";
+          btn.disabled = true;
+          showToast(ok ? `Row ${index + 1} copied — paste in VM` : `Row ${index + 1} selected — press Ctrl+C`);
+          if (!ok) {
+            row.classList.remove("copied");
+            btn.disabled = false;
+            btn.textContent = "Copy";
+            text.click();
+          }
+        });
+
+        row.appendChild(num);
+        row.appendChild(textWrap);
+        row.appendChild(btn);
+        lineList.appendChild(row);
+      });
+    }
+
+    function splitIntoLines() {
+      const text = input.value;
+      const maxChars = getMaxChars();
+      const lines = splitByMaxChars(text, maxChars);
+      inputMeta.textContent = lines.length
+        ? `${lines.length} row${lines.length === 1 ? "" : "s"} · up to ${maxChars} chars each`
+        : "";
+
+      if (text.length > 0) {
+        const ok = isAccurate(lines, text);
+        accuracyEl.classList.remove("hidden", "ok", "bad");
+        accuracyEl.classList.add(ok ? "ok" : "bad");
+        accuracyEl.textContent = ok
+          ? "✓ 100% accurate — all spaces preserved"
+          : "✗ accuracy check failed";
+      } else {
+        accuracyEl.classList.add("hidden");
+      }
+
+      renderLines(lines, maxChars);
+    }
+
+    splitBtn.addEventListener("click", splitIntoLines);
+
+    clearBtn.addEventListener("click", () => {
+      input.value = "";
+      inputMeta.textContent = "";
+      accuracyEl.classList.add("hidden");
+      lineList.innerHTML = "";
+      linesSection.classList.add("hidden");
+      empty.classList.remove("hidden");
+      empty.innerHTML = 'Paste text above and click <strong>Split into lines</strong>.';
+      input.focus();
+    });
+
+    maxCharsInput.addEventListener("change", splitIntoLines);
+    maxCharsInput.addEventListener("input", () => {
+      if (input.value.trim()) splitIntoLines();
+    });
+
+    input.addEventListener("paste", () => {
+      setTimeout(splitIntoLines, 0);
+    });
+
+    input.focus();
+  </script>
+</body>
+</html>
