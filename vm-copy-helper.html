@@ -355,7 +355,7 @@
     /** Split into chunks ≤ maxChars. Preserves every character and space exactly. */
     function splitByMaxChars(text, maxChars) {
       const src = text.replace(/\r\n/g, "\n");
-      if (src.length === 0) return [];
+      if (src.length === 0 || src.trim().length === 0) return [];
 
       const lines = [];
       let pos = 0;
