@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>result.json Portal Copy Helper</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a2332;
+      --surface2: #243044;
+      --border: #2d3a4f;
+      --text: #e7ecf3;
+      --muted: #8b9cb3;
+      --accent: #4f8cff;
+      --accent-hover: #6ba0ff;
+      --success: #3dd68c;
+      --warn: #f5a623;
+      --danger: #ff6b6b;
+      --radius: 10px;
+      --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+      --mono: Consolas, "Cascadia Code", monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: rgba(15, 20, 25, 0.92);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 20px;
+    }
+
+    header h1 {
+      margin: 0 0 4px;
+      font-size: 1.25rem;
+      font-weight: 650;
+    }
+
+    header p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .layout {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 18px;
+    }
+
+    .panel h2 {
+      margin: 0 0 12px;
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 180px;
+      resize: vertical;
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(79, 140, 255, 0.15);
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-top: 12px;
+    }
+
+    button, .file-btn {
+      appearance: none;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 14px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.05s;
+    }
+
+    button:active, .file-btn:active { transform: scale(0.98); }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-primary:hover { background: var(--accent-hover); }
+
+    .btn-secondary {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover { background: #2c3b52; }
+
+    .btn-success {
+      background: #1f6f4a;
+      color: #d8ffe9;
+      border: 1px solid #2f9d6a;
+    }
+
+    input[type="search"], input[type="file"] {
+      font-family: inherit;
+    }
+
+    #search {
+      flex: 1;
+      min-width: 200px;
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-size: 0.9rem;
+    }
+
+    #search:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 14px;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+
+    .stats strong { color: var(--text); }
+
+    .error {
+      background: rgba(255, 107, 107, 0.12);
+      border: 1px solid rgba(255, 107, 107, 0.35);
+      color: #ffb4b4;
+      padding: 10px 12px;
+      border-radius: 8px;
+      margin-top: 10px;
+      font-size: 0.9rem;
+      display: none;
+    }
+
+    .section-title {
+      margin: 22px 0 10px;
+      padding: 8px 12px;
+      background: var(--surface2);
+      border-left: 4px solid var(--accent);
+      border-radius: 6px;
+      font-size: 0.95rem;
+      font-weight: 650;
+    }
+
+    .field-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 10px;
+      overflow: hidden;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .field-card.active {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(79, 140, 255, 0.2);
+    }
+
+    .field-card.copied {
+      border-color: rgba(61, 214, 140, 0.45);
+    }
+
+    .field-head {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: #1e2a3c;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .field-label {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .field-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 28px;
+      height: 24px;
+      padding: 0 6px;
+      border-radius: 999px;
+      background: var(--bg);
+      color: var(--muted);
+      font-size: 0.75rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .field-path {
+      font-family: var(--mono);
+      font-size: 0.82rem;
+      color: #b8c9e6;
+      word-break: break-all;
+    }
+
+    .field-type {
+      font-size: 0.72rem;
+      color: var(--muted);
+      background: var(--bg);
+      padding: 2px 7px;
+      border-radius: 999px;
+      flex-shrink: 0;
+    }
+
+    .field-actions {
+      display: flex;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .btn-copy {
+      background: var(--accent);
+      color: #fff;
+      padding: 7px 12px;
+      font-size: 0.82rem;
+    }
+
+    .btn-copy:hover { background: var(--accent-hover); }
+
+    .btn-copy.done {
+      background: #1f6f4a;
+    }
+
+    .btn-mini {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 7px 10px;
+      font-size: 0.82rem;
+    }
+
+    .field-body {
+      padding: 12px;
+    }
+
+    .field-value {
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 0.88rem;
+      color: #d7e0ee;
+      max-height: 120px;
+      overflow: auto;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      font-family: var(--font);
+    }
+
+    .field-value.expanded { max-height: none; }
+
+    .field-meta {
+      margin-top: 8px;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .nav-bar {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 30;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+      min-width: 210px;
+    }
+
+    .nav-bar .progress {
+      font-size: 0.82rem;
+      color: var(--muted);
+      text-align: center;
+      padding: 0 4px 4px;
+    }
+
+    .nav-bar .progress strong { color: var(--text); }
+
+    .nav-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .nav-buttons .wide {
+      grid-column: 1 / -1;
+    }
+
+    .hidden { display: none !important; }
+
+    .empty-state {
+      text-align: center;
+      color: var(--muted);
+      padding: 40px 20px;
+    }
+
+    @media (max-width: 700px) {
+      .nav-bar {
+        left: 12px;
+        right: 12px;
+        bottom: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>result.json Portal Copy Helper</h1>
+    <p>Paste your result.json below. Only the 13 portal fields you need — summaries, ranking rationale, grading rationales, and optional comments.</p>
+  </header>
+
+  <div class="layout">
+    <div class="panel">
+      <h2>Paste JSON</h2>
+      <textarea id="jsonInput" placeholder='Paste your full result.json here, then click "Parse fields"...'></textarea>
+      <div class="toolbar">
+        <button class="btn-primary" id="parseBtn">Parse fields</button>
+        <label class="file-btn btn-secondary">
+          Load file
+          <input type="file" id="fileInput" accept=".json,application/json" hidden />
+        </label>
+        <button class="btn-secondary" id="clearBtn">Clear</button>
+        <input type="search" id="search" placeholder="Filter fields..." disabled />
+      </div>
+      <div class="error" id="errorBox"></div>
+    </div>
+
+    <div id="results" class="hidden">
+      <div class="stats" id="stats"></div>
+      <div id="fieldList"></div>
+    </div>
+
+    <div id="empty" class="empty-state">
+      No fields yet. Paste result.json and click <strong>Parse fields</strong>.
+    </div>
+  </div>
+
+  <div class="nav-bar hidden" id="navBar">
+    <div class="progress" id="navProgress">Field <strong>0</strong> of <strong>0</strong></div>
+    <div class="nav-buttons">
+      <button class="btn-secondary" id="prevBtn">Previous</button>
+      <button class="btn-secondary" id="nextBtn">Next</button>
+      <button class="btn-success wide" id="copyNextBtn">Copy current &amp; next</button>
+      <button class="btn-secondary wide" id="resetCopiedBtn">Reset copied marks</button>
+    </div>
+  </div>
+
+  <script>
+    const PORTAL_FIELDS = [
+      { path: "per_model_summaries.model_a", label: "Model A summary", section: "Summaries" },
+      { path: "per_model_summaries.model_b", label: "Model B summary", section: "Summaries" },
+      { path: "ranking_rationale", label: "Ranking rationale", section: "Ranking rationale" },
+      { path: "global_grading.model_a.correctness_rationale", label: "Model A — correctness rationale", section: "Global grading — Model A" },
+      { path: "global_grading.model_a.agent_behavior_rationale", label: "Model A — agent behavior rationale", section: "Global grading — Model A" },
+      { path: "global_grading.model_a.communications_rationale", label: "Model A — communications rationale", section: "Global grading — Model A" },
+      { path: "global_grading.model_a.code_style_rationale", label: "Model A — code style rationale", section: "Global grading — Model A" },
+      { path: "global_grading.model_b.correctness_rationale", label: "Model B — correctness rationale", section: "Global grading — Model B" },
+      { path: "global_grading.model_b.agent_behavior_rationale", label: "Model B — agent behavior rationale", section: "Global grading — Model B" },
+      { path: "global_grading.model_b.communications_rationale", label: "Model B — communications rationale", section: "Global grading — Model B" },
+      { path: "global_grading.model_b.code_style_rationale", label: "Model B — code style rationale", section: "Global grading — Model B" },
+      { path: "optional_clarification_comments", label: "Optional clarification comments", section: "Optional comments" },
+      { path: "optional_other_comments", label: "Optional other comments", section: "Optional comments" }
+    ];
+
+    let fields = [];
+    let currentIndex = 0;
+    const copied = new Set();
+
+    const jsonInput = document.getElementById("jsonInput");
+    const parseBtn = document.getElementById("parseBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const fileInput = document.getElementById("fileInput");
+    const search = document.getElementById("search");
+    const errorBox = document.getElementById("errorBox");
+    const results = document.getElementById("results");
+    const empty = document.getElementById("empty");
+    const fieldList = document.getElementById("fieldList");
+    const stats = document.getElementById("stats");
+    const navBar = document.getElementById("navBar");
+    const navProgress = document.getElementById("navProgress");
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const copyNextBtn = document.getElementById("copyNextBtn");
+    const resetCopiedBtn = document.getElementById("resetCopiedBtn");
+
+    function showError(msg) {
+      errorBox.textContent = msg;
+      errorBox.style.display = msg ? "block" : "none";
+    }
+
+    function getByPath(obj, path) {
+      const parts = path.split(".");
+      let cur = obj;
+      for (const part of parts) {
+        if (cur == null || !(part in cur)) return undefined;
+        cur = cur[part];
+      }
+      return cur;
+    }
+
+    async function copyText(text, btn) {
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      if (btn) {
+        const old = btn.textContent;
+        btn.textContent = "Copied!";
+        btn.classList.add("done");
+        setTimeout(() => {
+          btn.textContent = old;
+          btn.classList.remove("done");
+        }, 1200);
+      }
+    }
+
+    function renderFields(filter = "") {
+      fieldList.innerHTML = "";
+      const q = filter.trim().toLowerCase();
+      const visible = fields.filter((f) => {
+        if (!q) return true;
+        return f.path.toLowerCase().includes(q) || f.label.toLowerCase().includes(q);
+      });
+
+      let lastSection = "";
+      visible.forEach((field) => {
+        const section = field.section;
+        if (section !== lastSection) {
+          const h = document.createElement("div");
+          h.className = "section-title";
+          h.textContent = section;
+          fieldList.appendChild(h);
+          lastSection = section;
+        }
+
+        const globalIndex = fields.findIndex((x) => x.path === field.path);
+        const card = document.createElement("div");
+        card.className = "field-card";
+        card.dataset.index = String(globalIndex);
+        if (globalIndex === currentIndex) card.classList.add("active");
+        if (copied.has(field.path)) card.classList.add("copied");
+
+        const len = field.value.length;
+        const preview = field.value;
+
+        card.innerHTML = `
+          <div class="field-head">
+            <div class="field-label">
+              <span class="field-num">${globalIndex + 1}</span>
+              <span class="field-path">${escapeHtml(field.label)}</span>
+              <span class="field-type">${escapeHtml(field.type)}</span>
+            </div>
+            <div class="field-actions">
+              <button class="btn-mini toggle-btn" type="button">Expand</button>
+              <button class="btn-copy copy-btn" type="button">Copy</button>
+            </div>
+          </div>
+          <div class="field-body">
+            <div class="field-value">${escapeHtml(preview)}</div>
+            <div class="field-meta">${len.toLocaleString()} characters</div>
+          </div>
+        `;
+
+        const valueEl = card.querySelector(".field-value");
+        const toggleBtn = card.querySelector(".toggle-btn");
+        const copyBtn = card.querySelector(".copy-btn");
+
+        toggleBtn.addEventListener("click", () => {
+          const expanded = valueEl.classList.toggle("expanded");
+          toggleBtn.textContent = expanded ? "Collapse" : "Expand";
+        });
+
+        copyBtn.addEventListener("click", async () => {
+          await copyText(field.value, copyBtn);
+          copied.add(field.path);
+          card.classList.add("copied");
+          updateStats();
+        });
+
+        card.addEventListener("click", (e) => {
+          if (e.target.closest("button")) return;
+          currentIndex = globalIndex;
+          highlightCurrent();
+        });
+
+        fieldList.appendChild(card);
+      });
+
+      updateNav();
+      updateStats(visible.length);
+    }
+
+    function escapeHtml(str) {
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function highlightCurrent() {
+      document.querySelectorAll(".field-card").forEach((el) => {
+        el.classList.toggle("active", Number(el.dataset.index) === currentIndex);
+      });
+      const active = document.querySelector(`.field-card[data-index="${currentIndex}"]`);
+      if (active) active.scrollIntoView({ behavior: "smooth", block: "center" });
+      updateNav();
+    }
+
+    function updateNav() {
+      if (!fields.length) {
+        navBar.classList.add("hidden");
+        return;
+      }
+      navBar.classList.remove("hidden");
+      navProgress.innerHTML = `Field <strong>${currentIndex + 1}</strong> of <strong>${fields.length}</strong>`;
+      prevBtn.disabled = currentIndex <= 0;
+      nextBtn.disabled = currentIndex >= fields.length - 1;
+    }
+
+    function updateStats(visibleCount) {
+      const total = fields.length;
+      const shown = visibleCount ?? total;
+      const copiedCount = [...copied].filter((p) => fields.some((f) => f.path === p)).length;
+      stats.innerHTML = `
+        <span><strong>${shown}</strong> fields shown</span>
+        <span><strong>${total}</strong> total fields</span>
+        <span><strong>${copiedCount}</strong> copied</span>
+      `;
+    }
+
+    function parseJson() {
+      showError("");
+      const raw = jsonInput.value.trim();
+      if (!raw) {
+        showError("Paste result.json first.");
+        return;
+      }
+
+      let data;
+      try {
+        data = JSON.parse(raw);
+      } catch (e) {
+        showError("Invalid JSON: " + e.message);
+        return;
+      }
+
+      const missing = [];
+      fields = PORTAL_FIELDS.map((def) => {
+        const val = getByPath(data, def.path);
+        if (val === undefined || (typeof val === "object" && val !== null)) {
+          missing.push(def.label);
+          return null;
+        }
+        return {
+          path: def.path,
+          label: def.label,
+          section: def.section,
+          value: String(val),
+          type: typeof val
+        };
+      }).filter(Boolean);
+
+      if (missing.length) {
+        showError("Missing or empty fields: " + missing.join(", "));
+      }
+      currentIndex = 0;
+      copied.clear();
+
+      empty.classList.add("hidden");
+      results.classList.remove("hidden");
+      search.disabled = false;
+
+      renderFields(search.value);
+    }
+
+    parseBtn.addEventListener("click", parseJson);
+
+    clearBtn.addEventListener("click", () => {
+      jsonInput.value = "";
+      fields = [];
+      copied.clear();
+      currentIndex = 0;
+      fieldList.innerHTML = "";
+      results.classList.add("hidden");
+      empty.classList.remove("hidden");
+      navBar.classList.add("hidden");
+      search.value = "";
+      search.disabled = true;
+      showError("");
+    });
+
+    fileInput.addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      jsonInput.value = await file.text();
+      parseJson();
+      fileInput.value = "";
+    });
+
+    search.addEventListener("input", () => renderFields(search.value));
+
+    prevBtn.addEventListener("click", () => {
+      if (currentIndex > 0) {
+        currentIndex -= 1;
+        highlightCurrent();
+      }
+    });
+
+    nextBtn.addEventListener("click", () => {
+      if (currentIndex < fields.length - 1) {
+        currentIndex += 1;
+        highlightCurrent();
+      }
+    });
+
+    copyNextBtn.addEventListener("click", async () => {
+      if (!fields.length) return;
+      const field = fields[currentIndex];
+      const card = document.querySelector(`.field-card[data-index="${currentIndex}"]`);
+      const btn = card?.querySelector(".copy-btn");
+      await copyText(field.value, btn);
+      copied.add(field.path);
+      if (card) card.classList.add("copied");
+      updateStats();
+      if (currentIndex < fields.length - 1) {
+        currentIndex += 1;
+        highlightCurrent();
+      }
+    });
+
+    resetCopiedBtn.addEventListener("click", () => {
+      copied.clear();
+      renderFields(search.value);
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (!fields.length) return;
+      if (e.target.matches("textarea, input")) return;
+      if (e.key === "ArrowDown" || e.key === "j") {
+        e.preventDefault();
+        if (currentIndex < fields.length - 1) {
+          currentIndex += 1;
+          highlightCurrent();
+        }
+      }
+      if (e.key === "ArrowUp" || e.key === "k") {
+        e.preventDefault();
+        if (currentIndex > 0) {
+          currentIndex -= 1;
+          highlightCurrent();
+        }
+      }
+      if (e.key === "c" && !e.ctrlKey && !e.metaKey) {
+        copyNextBtn.click();
+      }
+    });
+  </script>
+</body>
+</html>
